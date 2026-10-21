@@ -66,51 +66,52 @@ def audit_tracking(path: Path, slots: list[str], expected: int, blocks: list,
     outside = 0
     rows = 0
     last_id = None
-    for rows, line in enumerate(path.open(encoding="utf-8"), start=1):
-        try:
-            frame_text, players_text, ball_text = line.strip().split(":")
-            frame_id = int(frame_text)
-            players = [observation(group) for group in players_text.split(";")]
-            ball = observation(ball_text)
-        except (ValueError, TypeError):
-            errors["malformed_rows"] += 1
-            previous = [None] * len(slots)
-            continue
-        if last_id is not None and frame_id <= last_id:
-            errors["out_of_order_ids"] += 1
-        last_id = frame_id
-        if not 1 <= frame_id <= expected:
-            errors["out_of_range_ids"] += 1
-            continue
-        frame = frame_id - 1
-        if seen[frame]:
-            errors["duplicate_ids"] += 1
-            continue
-        seen[frame] = 1
-        if len(players) != len(slots):
-            errors["wrong_slot_counts"] += 1
-            continue
-        for point in [ball, *players]:
-            errors["partial_coordinates"] += math.isnan(point[0]) != math.isnan(point[1])
-            if present(point) and not (0 <= point[0] <= 1 and 0 <= point[1] <= 1):
-                outside += 1
-        ball_mask[frame] = present(ball)
-        player_counts[frame] = sum(present(point) for point in players)
-        for i, point in enumerate(players):
-            if not present(point):
-                previous[i] = None
+    with path.open(encoding="utf-8") as handle:
+        for rows, line in enumerate(handle, start=1):
+            try:
+                frame_text, players_text, ball_text = line.strip().split(":")
+                frame_id = int(frame_text)
+                players = [observation(group) for group in players_text.split(";")]
+                ball = observation(ball_text)
+            except (ValueError, TypeError):
+                errors["malformed_rows"] += 1
+                previous = [None] * len(slots)
                 continue
-            stats = per_slot[i]
-            stats["observed_frames"] += 1
-            prev = previous[i]
-            if ever_seen[i] and (prev is None or prev[0] != frame - 1):
-                stats["reappearances"] += 1
-            if prev is not None and prev[0] == frame - 1:
-                speed = math.hypot((point[0] - prev[1]) * pitch[0],
-                                   (point[1] - prev[2]) * pitch[1]) * fps
-                stats["suspicious_jumps"] += speed > jump_speed
-            previous[i] = (frame, point[0], point[1])
-            ever_seen[i] = True
+            if last_id is not None and frame_id <= last_id:
+                errors["out_of_order_ids"] += 1
+            last_id = frame_id
+            if not 1 <= frame_id <= expected:
+                errors["out_of_range_ids"] += 1
+                continue
+            frame = frame_id - 1
+            if seen[frame]:
+                errors["duplicate_ids"] += 1
+                continue
+            seen[frame] = 1
+            if len(players) != len(slots):
+                errors["wrong_slot_counts"] += 1
+                continue
+            for point in [ball, *players]:
+                errors["partial_coordinates"] += math.isnan(point[0]) != math.isnan(point[1])
+                if present(point) and not (0 <= point[0] <= 1 and 0 <= point[1] <= 1):
+                    outside += 1
+            ball_mask[frame] = present(ball)
+            player_counts[frame] = sum(present(point) for point in players)
+            for i, point in enumerate(players):
+                if not present(point):
+                    previous[i] = None
+                    continue
+                stats = per_slot[i]
+                stats["observed_frames"] += 1
+                prev = previous[i]
+                if ever_seen[i] and (prev is None or prev[0] != frame - 1):
+                    stats["reappearances"] += 1
+                if prev is not None and prev[0] == frame - 1:
+                    speed = math.hypot((point[0] - prev[1]) * pitch[0],
+                                       (point[1] - prev[2]) * pitch[1]) * fps
+                    stats["suspicious_jumps"] += speed > jump_speed
+                previous[i] = (frame, point[0], point[1])
+                ever_seen[i] = True
     errors["missing_ids"] = expected - sum(seen)
     aligned = rows == expected and not any(errors.values())
     summaries = {}

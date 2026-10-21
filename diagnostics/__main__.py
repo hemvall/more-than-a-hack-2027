@@ -45,7 +45,7 @@ def run_audit(data_dir: str | None, source: str, check_video: bool,
         try:
             checks[name] = operation()
         except (OSError, ValueError, TypeError, KeyError, ET.ParseError,
-                subprocess.SubprocessError, ZeroDivisionError) as error:
+                subprocess.SubprocessError, ZeroDivisionError, OverflowError) as error:
             # Avoid emitting raw asset rows or video output into logs.
             checks[name] = {"status": "error", "error_type": type(error).__name__,
                             "message": f"Could not audit {name}; check input files and format locally."}
