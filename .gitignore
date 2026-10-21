@@ -62,3 +62,14 @@ __pycache__/
 venv/
 env/
 .DS_Store
+
+# Local experiments, credentials and tooling
+.env
+.env.*
+!.env.example
+runs/
+artifacts/
+.ruff_cache/
+.pytest_cache/
+coverage.xml
+.coverage
