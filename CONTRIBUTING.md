@@ -44,6 +44,7 @@ Use Python 3.11 and Node 22 for the added tooling:
 ```bash
 python -m pip install -r requirements-dev.txt
 python -m ruff check .
+python -m unittest discover -s tests -v
 node --test .github/scripts/check-policy.test.cjs
 python evaluation/run_evaluation.py --gt public --bootstrap 0 --no-detail
 ```
