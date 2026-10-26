@@ -18,7 +18,18 @@ install FFmpeg (including ffprobe) and run:
 python -m diagnostics --check-video
 ```
 
-This decodes the video and can take several minutes. It times out after ten minutes.
+This decodes the video and can take several minutes. It times out after twenty minutes;
+use `--video-timeout SECONDS` for a slower machine. Decoder errors fail the check even
+when the decoded frame count matches.
+The canonical video filename is preferred. If it is missing, the audit accepts exactly
+one numbered download variant such as `BAR-ATH_tactical-002.mp4`. Multiple variants
+are an error: choose the intended recording explicitly, without renaming your data:
+
+```bash
+python -m diagnostics --video data/tactical/BAR-ATH_tactical-002.mp4
+```
+
+`--video` implies `--check-video`; its path is relative to the current directory.
 Without this flag, video is explicitly marked not_checked. Structural checks can pass
 without video verification: that is not a claim that the full dataset is synchronized.
 
@@ -37,9 +48,13 @@ without video verification: that is not a claim that the full dataset is synchro
   counted for inspection rather than rejected, since players and the ball can leave the pitch.
 - Homography: exact zero-based indexing, required columns, valid flags, finite usable
   matrices and nonnegative reprojection errors. Invalid matrices must contain NaNs.
-- Smart Tagging: half-open frame intervals, video bounds, half-label overlap, code/team/half
+- Smart Tagging: half-open frame intervals, video bounds, code/team/half
   counts, and containment of both published kickoff anchors. Missing kickoff containment
-  produces a warning because tags are automatic and approximate. It cannot establish
+  produces an explicit warning status because tags are automatic and approximate.
+  Tags outside their named graded half and unknown half tags also produce warnings,
+  with counts retained in the report. Graded windows define scoring coverage, not
+  permitted annotation boundaries; automatic phases can reach ungraded footage.
+  Warnings require local inspection and do not establish a clock offset. Containment cannot establish
   frame-exact alignment. Unknown/N/A team tags are reported without inventing a team.
 
 The ATD conversion is frame_id - 1, not the private tracking offsets in games.py.
@@ -58,7 +73,7 @@ are deliberately not applied. This command does not align broadcast to tactical 
 
 ## Reading results
 
-Exit 0: requested structural checks passed (review warnings and not_checked entries).
+Exit 0: no structural failures (status pass or warning; review warnings and not_checked entries).
 Exit 1: structural or requested video checks failed.
 Exit 2: a required input/dependency could not be read, parsing failed, or report writing failed.
 Argparse also returns 2 for invalid arguments.
@@ -69,9 +84,20 @@ The JSON includes a schema_version and check-specific counters. It contains aggr
 quality information, not per-frame tracking exports. Keep generated reports local and
 review the competition terms before sharing any derived information.
 
+Failures in supplied assets are findings, not instructions to change those assets or
+the official constants. A negative reprojection error remains a failure: do not use
+that error value as a confidence weight. A decoded video length that differs from
+tracking/homography remains a failure, even by one frame. Do not trim, pad or shift a
+recording to hide it. Keep broadcast optional until its timeline is resolved; it never
+changes the tactical submission length. Report discrepancies to the data provider
+through the competition's permitted channels if needed.
+
 Passing these checks does not verify physical correctness. Review synchronized overlays
 at both kickoffs and representative passages locally before relying on the data.
-No real match quality findings are claimed by this implementation: tests use synthetic fixtures.
+The implementation's tests use synthetic fixtures. Local real-data reports stay under
+ignored `runs/`; they are not test fixtures and are not committed.
+Video inspection is for debugging only. Do not manually label or correct this match,
+or tune parameters on its public five-minute ground truth; see RULES.md.
 
 ## Tests
 

@@ -8,7 +8,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from diagnostics.__main__ import audit_video, main, run_audit
+from diagnostics.__main__ import audit_video, main, resolve_video, run_audit
 from diagnostics.alignment import MATRIX_COLUMNS, audit_homography, audit_tags
 from diagnostics.tracking import audit_tracking, read_slots
 
@@ -106,6 +106,13 @@ class AuditTests(unittest.TestCase):
         self.write_homography(matrix=[1e-8, 0, 0, 0, 1e-8, 0, 0, 0, 1e-8])
         self.assertEqual(audit_homography(self.homography, 6)["status"], "pass")
 
+    def test_negative_reprojection_error_remains_a_failure(self):
+        self.write_homography()
+        self.homography.write_text(self.homography.read_text().replace(",0.1,1", ",-0.1,1"))
+        result = audit_homography(self.homography, 6)
+        self.assertEqual(result["status"], "fail")
+        self.assertEqual(result["errors"]["invalid_reprojection_errors"], 6)
+
     def event(self, start=0, end=2, half="1st Half"):
         return {"start_frame": start, "end_frame": end, "code": "SET PIECES",
                 "tags": {"Half": half, "Type": "Kick Off (Start)", "Team": "N/A"}}
@@ -117,8 +124,19 @@ class AuditTests(unittest.TestCase):
         self.assertTrue(result["kickoff_containment"]["1st Half"])
         self.assertEqual(result["teams"]["n/a"], 1)
 
-    def test_tag_wrong_half_and_out_of_bounds(self):
-        for event in [self.event(0, 2, "2nd Half"), self.event(-1, 2), self.event(2, 2)]:
+    def test_tag_outside_graded_half_is_warning_not_alignment_failure(self):
+        result = audit_tags([self.event(2, 4)], 6, self.blocks, {})
+        self.assertEqual(result["status"], "warning")
+        self.assertEqual(result["outside_named_graded_half"], 1)
+        self.assertEqual(result["errors"], {})
+
+    def test_tag_unknown_half_is_visible_warning(self):
+        result = audit_tags([self.event(0, 2, "unknown")], 6, self.blocks, {})
+        self.assertEqual(result["status"], "warning")
+        self.assertEqual(result["unknown_half_tags"], 1)
+
+    def test_tag_out_of_bounds_remains_failure(self):
+        for event in [self.event(-1, 2), self.event(2, 2), self.event(0, 7)]:
             with self.subTest(event=event):
                 self.assertEqual(audit_tags([event], 6, self.blocks)["status"], "fail")
 
@@ -139,6 +157,58 @@ class AuditTests(unittest.TestCase):
         output = json.dumps({"streams": [{"nb_read_frames": "5", "avg_frame_rate": "25/1"}]})
         with patch("diagnostics.__main__.subprocess.run", return_value=subprocess.CompletedProcess([], 0, output)):
             self.assertEqual(audit_video(self.root / "video.mp4", 6, 25)["status"], "fail")
+
+    def test_video_resolver_canonical_numbered_override_and_ambiguity(self):
+        canonical = self.root / "match.mp4"
+        first = self.root / "match-002.mp4"
+        unrelated = self.root / "match-preview.mp4"
+        unrelated.touch()
+        with self.assertRaises(ValueError):
+            resolve_video(canonical)
+        first.touch()
+        self.assertEqual(resolve_video(canonical), first)
+        second = self.root / "match-003.mp4"
+        second.touch()
+        with self.assertRaises(ValueError):
+            resolve_video(canonical)
+        self.assertEqual(resolve_video(canonical, str(second)), second)
+        canonical.touch()
+        self.assertEqual(resolve_video(canonical), canonical)
+        with self.assertRaises(FileNotFoundError):
+            resolve_video(canonical, str(self.root / "missing.mp4"))
+
+    def test_video_decode_errors_fail_even_with_matching_count(self):
+        output = json.dumps({"streams": [{"nb_read_frames": "6", "avg_frame_rate": "25/1"}]})
+        result = subprocess.CompletedProcess([], 0, output, "decoder error")
+        with patch("diagnostics.__main__.subprocess.run", return_value=result):
+            check = audit_video(self.root / "video.mp4", 6, 25)
+        self.assertEqual(check["status"], "fail")
+        self.assertTrue(check["decoder_errors"])
+
+    def test_explicit_video_enables_decode_and_timeout_is_forwarded(self):
+        video = self.root / "chosen.mp4"
+        video.touch()
+        output = self.root / "report.json"
+        with patch("diagnostics.__main__.audit_video", return_value={"status": "pass"}) as probe:
+            main(["--data-dir", str(self.root), "--video", str(video),
+                  "--video-timeout", "30", "--output", str(output)])
+        self.assertEqual(probe.call_args.args, (video, 199319, 25, 30))
+        with self.assertRaises(SystemExit):
+            main(["--video-timeout", "0"])
+
+    def test_warning_status_is_visible_and_does_not_hide_failures(self):
+        output = self.root / "report.json"
+        for tracking_status, expected_status, expected_exit in [
+                ("pass", "warning", 0), ("fail", "fail", 1)]:
+            with self.subTest(tracking_status=tracking_status), \
+                 patch("diagnostics.__main__.read_slots", return_value=self.slots), \
+                 patch("diagnostics.__main__.audit_tracking", return_value={"status": tracking_status}), \
+                 patch("diagnostics.__main__.audit_homography", return_value={"status": "pass"}), \
+                 patch("diagnostics.__main__.load_tags", return_value=[]), \
+                 patch("diagnostics.__main__.audit_tags", return_value={
+                     "status": "warning", "warnings": ["Inspect tags locally."]}):
+                self.assertEqual(main(["--output", str(output)]), expected_exit)
+                self.assertEqual(json.loads(output.read_text())["status"], expected_status)
 
     def test_cli_end_to_end_with_synthetic_bundle(self):
         folder = self.root / "tactical"
