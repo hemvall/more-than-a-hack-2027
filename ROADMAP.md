@@ -3,6 +3,9 @@
 Mise à jour : 26 octobre 2026. Ce document conserve l'ordre de travail décidé
 avec le propriétaire du dépôt. Les issues restent les unités de livraison :
 une branche et une PR vers main par issue, sans fusion non autorisée.
+Terminer les vérifications et la fusion de la PR en cours avant de commencer
+l'issue suivante, conformément à la demande du propriétaire. Ne pas accumuler
+des PR successives ouvertes pour avancer dans cette roadmap.
 
 ## Contraintes permanentes
 
@@ -46,8 +49,9 @@ les fichiers pour masquer un écart. Les constats détaillés restent dans runs/
 
 ## Point de reprise
 
-Travail courant : #6, runner d'expériences et journalisation reproductible.
-Première livraison : exécuter les quatre baselines officielles sans données privées,
-puis les régénérer localement et vérifier l'identité des prédictions, sans tuning.
-Ensuite : viewer minimal (#2/#15) et protocole externe (#3), avant #4/#5.
-Le statut d'implémentation et les commandes sont détaillés dans docs/experiments.md.
+Le runner #6 est livré par #16 : les quatre baselines ont été régénérées localement
+et vérifiées identiques aux références, sans tuning. Commandes : docs/experiments.md.
+Le viewer minimal #2, couvrant le périmètre d'inspection partagé avec #15, est suivi
+par #17. Commandes et limites : docs/viewer.md.
+Après vérification et fusion du viewer, prochaine issue : protocole externe #3,
+puis cas difficiles #9 et développement #4/#5 suivant les étapes ci-dessus.
