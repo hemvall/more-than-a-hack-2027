@@ -107,6 +107,12 @@ Full description of every asset and how the frames line up: **[DATA.md](DATA.md)
 
 ---
 
+## Local inspection tools in this fork
+
+Run `python -m viewer` to inspect tactical video, tracking overlays and possession
+timelines locally. Start with the synthetic demo; see [docs/viewer.md](docs/viewer.md)
+for imports, controls and alignment limits. Imported match files stay in the browser.
+
 ## Read these, in this order
 
 | | |
