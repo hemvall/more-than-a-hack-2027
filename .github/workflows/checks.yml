@@ -59,6 +59,7 @@ jobs:
           node-version: '22'
       - run: python -m pip install -r requirements-dev.txt
       - run: python -m ruff check .
+      - run: python -m unittest discover -s tests -v
       - run: node --test .github/scripts/check-policy.test.cjs
       - name: Validate supplied baseline submissions
         shell: bash
