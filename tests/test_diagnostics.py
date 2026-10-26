@@ -180,10 +180,12 @@ class AuditTests(unittest.TestCase):
     def test_video_decode_errors_fail_even_with_matching_count(self):
         output = json.dumps({"streams": [{"nb_read_frames": "6", "avg_frame_rate": "25/1"}]})
         result = subprocess.CompletedProcess([], 0, output, "decoder error")
-        with patch("diagnostics.__main__.subprocess.run", return_value=result):
+        with patch("diagnostics.__main__.subprocess.run", return_value=result) as probe:
             check = audit_video(self.root / "video.mp4", 6, 25)
         self.assertEqual(check["status"], "fail")
         self.assertTrue(check["decoder_errors"])
+        command = probe.call_args.args[0]
+        self.assertEqual(command[command.index("-threads") + 1], "0")
 
     def test_explicit_video_enables_decode_and_timeout_is_forwarded(self):
         video = self.root / "chosen.mp4"

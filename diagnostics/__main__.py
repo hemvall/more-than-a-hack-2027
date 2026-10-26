@@ -36,7 +36,7 @@ def resolve_video(path: Path, override: str | None = None) -> Path:
 
 def audit_video(path: Path, expected: int, fps: float, timeout: int = 1200) -> dict:
     """Count decoded frames using ffprobe; never estimate from duration."""
-    command = ["ffprobe", "-v", "error", "-select_streams", "v:0", "-count_frames",
+    command = ["ffprobe", "-v", "error", "-threads", "0", "-select_streams", "v:0", "-count_frames",
                "-show_entries", "stream=nb_read_frames,avg_frame_rate",
                "-of", "json", str(path)]
     result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=timeout)

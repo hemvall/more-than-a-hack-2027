@@ -19,7 +19,8 @@ python -m diagnostics --check-video
 ```
 
 This decodes the video and can take several minutes. It times out after twenty minutes;
-use `--video-timeout SECONDS` for a slower machine. Decoder errors fail the check even
+use `--video-timeout SECONDS` for a slower machine. ffprobe uses automatic decoder
+threading instead of its single-thread default. Decoder errors fail the check even
 when the decoded frame count matches.
 The canonical video filename is preferred. If it is missing, the audit accepts exactly
 one numbered download variant such as `BAR-ATH_tactical-002.mp4`. Multiple variants
