@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Possession Lab · Inspection locale</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<header class="topbar"><a class="brand" href="/">Possession<span>Lab</span></a><span>Inspection du match</span><strong id="mode">Démo synthétique</strong></header>
+<main>
+  <div class="intro"><h1>Voir ce qui change.</h1><p>Vidéo, positions et possession sur la même timeline.</p></div>
+  <div class="workspace">
+    <section class="stage" aria-label="Vidéo et commandes">
+      <div class="stage-heading"><h2>Vue tactique</h2><span id="sourceStatus">Données simulées · 25 fps</span></div>
+      <div class="screen" id="screen">
+        <video id="video" playsinline preload="metadata" hidden></video>
+        <canvas id="overlay" width="1120" height="630" aria-label="Positions simulées ou tracking projeté"></canvas>
+        <div id="screenEmpty" hidden><strong>La vidéo reste ici.</strong><p>Choisis la vidéo tactique sur ton appareil.</p></div>
+        <div class="screen-corner"><span id="screenMode">SIMULATION</span><span id="screenFrame">F 000000</span></div>
+      </div>
+      <div class="transport">
+        <button id="play" class="primary" aria-label="Lire la timeline">Lire</button>
+        <div class="stepper"><button id="prevFrame" aria-label="Frame précédente">−1</button><button id="nextFrame" aria-label="Frame suivante">+1</button></div>
+        <label class="compact">Vitesse<select id="speed"><option value="0.25">0,25×</option><option value="0.5">0,5×</option><option value="1" selected>1×</option><option value="2">2×</option></select></label>
+        <output id="clock">00:00.000</output>
+        <label class="compact frame-input">Frame<input id="frame" type="number" min="0" value="0" step="1"></label>
+      </div>
+      <input id="seek" type="range" min="0" max="1499" value="0" step="1" aria-label="Position dans la timeline">
+      <div class="timeline-label"><span>Prédiction</span><span>Référence publique</span></div>
+      <canvas id="timeline" width="1120" height="70" aria-label="Segments de prédiction et fenêtre publique"></canvas>
+      <div class="legend"><span class="H">H · domicile</span><span class="A">A · extérieur</span><span class="D">D · arrêt</span><span class="X">X · abstention</span><small id="duration">1 500 frames</small></div>
+      <div class="current"><div><span>Prédiction</span><strong id="prediction">H</strong></div><div><span>Référence</span><strong id="truth">Non chargée</strong></div><p id="overlayStatus">Positions fictives pour explorer les commandes.</p></div>
+    </section>
+    <aside aria-label="Sources et inspection">
+      <section class="sources">
+        <div class="section-heading"><h2>Sources locales</h2><button id="reset" class="quiet">Démo</button></div>
+        <p class="helper">Tactique uniquement. Aucun import n’est envoyé au serveur.</p>
+        <label class="file-row"><span><strong>01</strong> Vidéo tactique<small id="videoStatus">MP4 · timeline originale à 25 fps</small></span><input id="videoFile" type="file" accept="video/mp4,video/*"><span class="file-action">Choisir</span></label>
+        <label class="file-row"><span><strong>02</strong> Prédictions<small id="predStatus">CSV · frame,label · H/A/D/X</small></span><input id="predFile" type="file" accept=".csv,text/csv"><span class="file-action">Choisir</span></label>
+        <label class="file-row"><span><strong>03</strong> Tracking<small id="trackStatus">Sélectionner ATD XML + TXT ensemble</small></span><input id="trackFiles" type="file" accept=".xml,.txt" multiple><span class="file-action">Choisir</span></label>
+        <label class="file-row"><span><strong>04</strong> Homographie<small id="homStatus">CSV · projection terrain vers image</small></span><input id="homFile" type="file" accept=".csv,text/csv"><span class="file-action">Choisir</span></label>
+        <button id="publicTruth" class="wide">Charger la référence publique</button>
+        <div id="notice" role="status" aria-live="polite">La démo n’utilise aucune donnée de compétition.</div>
+      </section>
+      <section class="inspection">
+        <h2>Points de contrôle</h2>
+        <div class="jump-pair"><button id="prevTransition">Transition précédente</button><button id="nextTransition">Transition suivante</button></div>
+        <div class="jump-pair"><button id="prevError" disabled>Écart précédent</button><button id="nextError" disabled>Écart suivant</button></div>
+        <p id="transitionInfo" class="helper"></p>
+        <ol id="transitions" aria-label="Transitions proches de la frame courante"></ol>
+      </section>
+      <p class="rule">La fenêtre publique vérifie le pipeline. Aucun réglage de modèle, label manuel ou correction sur ce match.</p>
+    </aside>
+  </div>
+  <footer><span>Traitement en mémoire · fichiers à resélectionner après rechargement</span><span>← → frame · Espace lecture</span></footer>
+</main>
+</body>
+</html>
